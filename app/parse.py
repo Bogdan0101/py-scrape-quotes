@@ -18,21 +18,28 @@ class Quote:
 FIELDS = [field.name for field in fields(Quote)]
 
 
-def serializer_quote(quote: Tag) -> Quote:
-    description_pref = quote.select_one("span>a")["href"]
-    res_description = requests.get(BASE_URL + description_pref).content
-    description = (BeautifulSoup(res_description, "html.parser")
-                   .select_one(".author-description").text)
+def serializer_quote(quote: Tag, authors_cache: dict) -> Quote:
+    author = quote.select_one(".author").string
+    if author in authors_cache:
+        description = authors_cache[author]
+    else:
+        description_pref = quote.select_one("span>a")["href"]
+        res_description = requests.get(BASE_URL + description_pref).content
+        description = (BeautifulSoup(res_description, "html.parser")
+                       .select_one(".author-description").text).strip()
+        authors_cache[author] = description
+
     return Quote(
         text=quote.select_one(".text").string,
-        author=quote.select_one(".author").string,
+        author=author,
         tags=[tag.string for tag in quote.select(".tag")],
-        author_description=description.strip(),
+        author_description=description,
     )
 
 
 def scrape_quotes(url: str) -> list[Quote]:
     quotes = []
+    authors_cache = {}
     next_button_pref = None
 
     while True:
@@ -51,7 +58,7 @@ def scrape_quotes(url: str) -> list[Quote]:
 
         next_button_pref = next_button["href"]
 
-    return [serializer_quote(quote) for quote in quotes]
+    return [serializer_quote(quote, authors_cache) for quote in quotes]
 
 
 def main(output_csv_path: str) -> None:
