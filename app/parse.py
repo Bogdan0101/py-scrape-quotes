@@ -33,19 +33,19 @@ def serializer_quote(quote: Tag) -> Quote:
 
 def scrape_quotes(url: str) -> list[Quote]:
     quotes = []
-    response = requests.get(url).content
-    soup = BeautifulSoup(response, "html.parser")
-    quotes += soup.select(".quote")
-    print("/page/1/")
-    next_button_pref = soup.select_one("li.next>a")["href"]
+    next_button_pref = None
 
     while True:
-        print(next_button_pref)
-        response = requests.get(BASE_URL + next_button_pref).content
+        if next_button_pref:
+            print(next_button_pref)
+            response = requests.get(BASE_URL + next_button_pref).content
+        else:
+            print("/page/1/")
+            response = requests.get(url).content
+
         soup = BeautifulSoup(response, "html.parser")
         quotes += soup.select(".quote")
         next_button = soup.select_one("li.next>a")
-
         if not next_button:
             break
 
